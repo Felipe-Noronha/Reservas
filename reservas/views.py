@@ -10,6 +10,8 @@ from io import BytesIO
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 from weasyprint import HTML
+import matplotlib.pyplot as plt
+import base64
 
 
 def index(request):
@@ -45,6 +47,7 @@ def fazer_reserva(request):
 
 
 
+@login_required
 def generate_pdf(request):
     # Renderiza o template HTML em um contexto
     template = get_template('reservas/index.html')  
@@ -59,18 +62,32 @@ def generate_pdf(request):
         reservas_count = Reserva.objects.filter(area_lazer=area).count()
         dados_grafico.append([area.nome, reservas_count])
 
-    html = template.render({ 'dados_grafico': dados_grafico, 'areas_lazer': areas_lazer, 'reservas': reservas})  
+    # Gere o gráfico
+    plt.pie([data[1] for data in dados_grafico], labels=[data[0] for data in dados_grafico])
+    image_stream = BytesIO()
+    plt.savefig(image_stream, format='png')
+    image_stream.seek(0)
+    image_data = base64.b64encode(image_stream.read()).decode('utf-8')
 
-    # Cria um buffer de bytes para armazenar o PDF
-    buffer = BytesIO()
+    # Adicione a imagem ao contexto
+    context = {
+        'dados_grafico': dados_grafico,
+        'areas_lazer': areas_lazer,
+        'reservas': reservas,
+        'grafico_base64': image_data  # Adicione a variável com a imagem do gráfico
+    }
+
+    # Renderize o template com o contexto atualizado
+    html = template.render(context)
 
     # Use o WeasyPrint para gerar o PDF
-    HTML(string=html).write_pdf(buffer)
+    pdf_buffer = BytesIO()
+    HTML(string=html).write_pdf(pdf_buffer)
 
     # Define a posição do buffer para o início
-    buffer.seek(0)
+    pdf_buffer.seek(0)
 
     # Cria uma resposta HTTP com o PDF como conteúdo
-    response = HttpResponse(buffer, content_type='application/pdf')
+    response = HttpResponse(pdf_buffer, content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename=example.pdf'
     return response
