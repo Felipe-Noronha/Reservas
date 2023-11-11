@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserva de Área de Lazer</title>
+
+    <!-- Adicione a biblioteca do Google Charts -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+    <!-- Adicione a biblioteca do Bootstrap 5 via CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" integrity="sua-integridade-aqui" crossorigin="anonymous">
+
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="{% url 'index' %}">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'fazer_reserva' %}">Fazer Reserva</a></li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'generate_pdf' %}" target="_blank">Gerar PDF</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <h1 class="mb-4">Bem-Vindo a Reserva de Área de Lazer</h1>
+
+        <div class="row">
+            <div class="col-md-6">
+                <h2>Áreas de Lazer</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for area in areas_lazer %}
+                            <tr>
+                                <td>{{ area.nome }}</td>
+                                <td>{{ area.descricao }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="col-md-6">
+                <h2>Reservas</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Área de Lazer</th>
+                            <th>Usuário</th>
+                            <th>Data de Início</th>
+                            <th>Data de Fim</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reserva in reservas %}
+                            <tr>
+                                <td>{{ reserva.area_lazer.nome }}</td>
+                                <td>{{ reserva.usuario.username }}</td>
+                                <td>{{ reserva.data_inicio|date:"F d, Y" }}</td>
+                                <td>{{ reserva.data_fim|date:"F d, Y" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adicione uma div para o gráfico -->
+    <div class="container mt-5">
+        <div id="grafico"></div>
+    </div>
+
+    <script type="text/javascript">
+        google.charts.load('current', {'packages':['corechart']});
+        google.charts.setOnLoadCallback(function() {
+            // Certifique-se de que dados_grafico é uma lista válida no seu template Django
+            var dadosDjango = {{ dados_grafico|safe }};
+            
+            var dados = new google.visualization.DataTable();
+            dados.addColumn('string', 'Área de Lazer');
+            dados.addColumn('number', 'Quantidade de Reservas');
+            dados.addRows(dadosDjango);
+    
+            var options = {
+                title: 'Quantidade de Reservas por Área de Lazer',
+            };
+    
+            var chart = new google.visualization.PieChart(document.getElementById('grafico'));
+            chart.draw(dados, options);
+        });
+    </script>
+
+</body>
+</html>
