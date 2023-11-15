@@ -2,15 +2,12 @@ from django.shortcuts import render, redirect
 from .models import AreaDeLazer, Reserva
 from .forms import ReservaForm
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-import json
-from reportlab.pdfgen import canvas
 from django.http import HttpResponse
 from io import BytesIO
 from django.template.loader import get_template
-from xhtml2pdf import pisa
 from weasyprint import HTML
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 import base64
 
 
@@ -42,19 +39,17 @@ def fazer_reserva(request):
             return redirect('index')
         else:
             form = ReservaForm()
-    return render(request, 'reservas/fazer_reserva.html',{'form': form})
-
-
+    return render(request, 'reservas/fazer_reserva.html', {'form': form})
 
 
 @login_required
 def generate_pdf(request):
     # Renderiza o template HTML em um contexto
-    template = get_template('reservas/index.html')  
+    template = get_template('reservas/index.html')
 
     areas_lazer = AreaDeLazer.objects.all()
     reservas = Reserva.objects.all()
-    
+
     dados_grafico = []
 
     for area in areas_lazer:
@@ -63,9 +58,16 @@ def generate_pdf(request):
         dados_grafico.append([area.nome, reservas_count])
 
     # Gere o gráfico
-    plt.pie([data[1] for data in dados_grafico], labels=[data[0] for data in dados_grafico])
+    fig, ax = plt.subplots()
+    ax.pie([data[1] for data in dados_grafico], labels=[data[0] for data in dados_grafico])
+
+    # Converta a figura para uma imagem em BytesIO
     image_stream = BytesIO()
-    plt.savefig(image_stream, format='png')
+    FigureCanvasAgg(fig).print_png(image_stream)
+
+    # Limpe a figura para liberar recursos
+    plt.close(fig)
+
     image_stream.seek(0)
     image_data = base64.b64encode(image_stream.read()).decode('utf-8')
 
